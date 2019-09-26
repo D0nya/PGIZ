@@ -1,0 +1,14 @@
+﻿  DirectXManager.cpp
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(246,17): warning C4305:  '-=': truncation from 'double' to 'FLOAT'
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(250,17): warning C4305:  '-=': truncation from 'double' to 'FLOAT'
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(254,17): warning C4305:  '+=': truncation from 'double' to 'FLOAT'
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(258,17): warning C4305:  '+=': truncation from 'double' to 'FLOAT'
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(262,17): warning C4305:  '+=': truncation from 'double' to 'FLOAT'
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(266,17): warning C4305:  '-=': truncation from 'double' to 'FLOAT'
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(271,16): warning C4305:  '-=': truncation from 'double' to 'FLOAT'
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(275,16): warning C4305:  '+=': truncation from 'double' to 'FLOAT'
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(279,16): warning C4305:  '+=': truncation from 'double' to 'FLOAT'
+  Window.cpp
+  Generating Code...
+D:\Stud\PGiZ\DxLib\DxLib\DirectXManager.cpp(283,16): warning C4305:  '-=': truncation from 'double' to 'FLOAT'
+  DxLib.vcxproj -> D:\Stud\PGiZ\DxLib\x64\Debug\DxLib.lib
