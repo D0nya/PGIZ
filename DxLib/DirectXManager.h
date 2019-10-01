@@ -31,6 +31,7 @@ namespace DxLib
 
 		HRESULT InitMatrixes();
 		void SetMatrixes(float fAngle);
+		void SetMatrixes();
 		DirectX::XMMATRIX				g_World;                      // Матрица мира
 		DirectX::XMMATRIX				g_View;                       // Матрица вида
 		DirectX::XMMATRIX				g_Projection;                 // Матрица проекции
@@ -41,7 +42,7 @@ namespace DxLib
 		DirectX::XMVECTOR				Eye = DirectX::XMVectorSet(Xeye, Yeye, Zeye, 0.0f);  // Откуда смотрим
 		DirectX::XMVECTOR				At = DirectX::XMVectorSet(Xat, Yat, Zat, 0.0f);    // Куда смотрим
 		DirectX::XMVECTOR				Up = DirectX::XMVectorSet(Xup, Yup, Zup, 0.0f);    // Направление верха
-		GameObject* go = nullptr;
+		std::list<GameObject*> gameObjects;
 	public:
 		DirectXManager(HWND& hWnd);
 		DirectXManager(const DirectXManager&) = delete;

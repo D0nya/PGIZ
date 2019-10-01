@@ -65,9 +65,48 @@ namespace DxLib
 			return;
 		}
 		g_pImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		go = new GameObject(g_pd3dDevice, hWnd);
+		gameObjects.push_back(new GameObject(g_pd3dDevice, hWnd, nullptr));
 
-		g_pImmediateContext->IASetInputLayout(go->mesh->shader->g_pVertexLayout);
+		SimpleVertex verticesMorkva[] =
+		{  /* координаты X, Y, Z                          цвет R, G, B, A     */
+			{ DirectX::XMFLOAT3(0.0f,  3.f,  0.0f), DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f) },
+			{ DirectX::XMFLOAT3(-0.5f,  0.5f, -0.5f), DirectX::XMFLOAT4(1.0f, 0.5f, 0.0f, 0.0f) },
+			{ DirectX::XMFLOAT3(0.5f,  0.5f, -0.5f), DirectX::XMFLOAT4(1.0f, 0.5f, 0.0f, 0.0f) },
+			{ DirectX::XMFLOAT3(-0.5f,  0.5f,  0.5f), DirectX::XMFLOAT4(1.0f, 0.5f, 0.0f, 0.0f) },
+			{ DirectX::XMFLOAT3(0.5f,  0.5f,  0.5f), DirectX::XMFLOAT4(1.0f, 0.5f, 0.0f, 0.0f) },
+			{ DirectX::XMFLOAT3(-0.25f,  0.f,  -0.25f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f) },
+			{ DirectX::XMFLOAT3(0.25f,  0.f,  -0.25f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f) },
+			{ DirectX::XMFLOAT3(-0.25f,  0.f,  0.25f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f) },
+			{ DirectX::XMFLOAT3(0.25f,  0.f,  0.25f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f) },
+		};
+		WORD indicesMorkva[] =
+		{  // индексы массива vertices[], по которым строятся треугольники
+			0,2,1,      /* Треугольник 1 = vertices[0], vertices[2], vertices[1] */
+			0,3,4,      /* Треугольник 2 = vertices[0], vertices[3], vertices[4] */
+			0,1,3,      /* и т. д. */
+			0,4,2,
+
+			1,5,7,
+			1,6,5,
+			1,7,3,
+			1,2,6,
+
+			4,3,7,
+			8,4,7,
+			8,6,2,
+			8,2,4,
+
+			5,6,8,
+			5,8,7
+
+		};
+		ShapeTemplate templ;
+		templ.vertices = verticesMorkva;
+		templ.indices = indicesMorkva;
+		templ.iSize = 42;
+		templ.vSize = 9;
+
+		gameObjects.push_back(new GameObject(g_pd3dDevice, hWnd, &templ));
 
 		hr = InitMatrixes();
 		if (FAILED(hr))
@@ -237,50 +276,76 @@ namespace DxLib
 		cb.mProjection = XMMatrixTranspose(g_Projection);
 		g_pImmediateContext->UpdateSubresource(g_pConstantBuffer, 0, NULL, &cb, 0, 0);
 	}
-
+	void DirectXManager::SetMatrixes()
+	{
+		// Обновление переменной-времени
+		static float t = 0.0f;
+		if (g_driverType == D3D_DRIVER_TYPE_REFERENCE)
+		{
+			t += (float)DirectX::XM_PI * 0.0125f;
+		}
+		else
+		{
+			static ULONGLONG dwTimeStart = 0;
+			ULONGLONG dwTimeCur = GetTickCount64();
+			if (dwTimeStart == 0)
+				dwTimeStart = dwTimeCur;
+			t = (dwTimeCur - dwTimeStart) / 1000.0f;
+		}
+		// Вращать мир по оси Y на угол t (в радианах)
+		g_World = DirectX::XMMatrixRotationY(t);
+		// Обновить константный буфер
+		// создаем временную структуру и загружаем в нее матрицы
+		ConstantBuffer cb;
+		cb.mWorld = XMMatrixTranspose(g_World);
+		cb.mView = XMMatrixTranspose(g_View);
+		cb.mProjection = XMMatrixTranspose(g_Projection);
+		// загружаем временную структуру в константный буфер g_pConstantBuffer
+		g_pImmediateContext->UpdateSubresource(g_pConstantBuffer, 0, NULL, &cb, 0, 0);
+	}
 	void DirectXManager::UpdateView()
 	{
 
 		if (GetKeyState('A') & 0x8000)
 		{
-			Xeye -= 0.001;
+			Xeye -= 0.001F;
 		}
 		if (GetKeyState('S') & 0x8000)
 		{
-			Zeye -= 0.001;
+			Zeye -= 0.001F;
 		}
 		if (GetKeyState('D') & 0x8000)
 		{
-			Xeye += 0.001;
+			Xeye += 0.001F;
 		}
 		if (GetKeyState('W') & 0x8000)
 		{
-			Zeye += 0.001;
+			Zeye += 0.001F;
 		}
 		if (GetKeyState(VK_SPACE) & 0x8000)
 		{
-			Yeye += 0.001;
+			Yeye += 0.001F;
 		}
 		if (GetKeyState(VK_CONTROL) & 0x8000)
 		{
-			Yeye -= 0.001;
+			Yeye -= 0.001F;
 		}
 
 		if (GetKeyState(VK_LEFT) & 0x8000)
 		{
-			Xat -= 0.001;
+			Xat -= 0.001F;
 		}
 		if (GetKeyState(VK_RIGHT) & 0x8000)
 		{
-			Xat += 0.001;
+			Xat += 0.001F;
 		}
 		if (GetKeyState(VK_UP) & 0x8000)
 		{
-			Yat += 0.001;
+			Yat += 0.001F;
 		}
 		if (GetKeyState(VK_DOWN) & 0x8000)
 		{
-			Yat -= 0.001;
+			Yat -= 0.001F;
 		}
 		Eye = DirectX::XMVectorSet(Xeye, Yeye, Zeye, 0.0f);  // Откуда смотрим
 		At = DirectX::XMVectorSet(Xat, Yat, Zat, 0.0f);    // Куда смотрим
@@ -298,23 +363,34 @@ namespace DxLib
 		g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, ClearColor);
 		// Очистить буфер глубин до 1.0 (максимальное значение)
 		g_pImmediateContext->ClearDepthStencilView(g_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-		g_pImmediateContext->IASetVertexBuffers(0, 1, &go->mesh->g_pVertexBuffer, &stride, &offset);
-		// Установка буфера индексов
-		g_pImmediateContext->IASetIndexBuffer(go->mesh->g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-
-		
-		for (int i = 0; i < 6; i++)
+		int i = 0;
+		for (auto go : gameObjects)
 		{
-			// Устанавливаем матрицу, параметр - положение относительно оси Y в радианах
-			SetMatrixes(i * (DirectX::XM_PI * 2) / 6);
-			// Рисуем i-тую пирамидку
+			g_pImmediateContext->IASetInputLayout(go->mesh->shader->g_pVertexLayout);
+			g_pImmediateContext->IASetVertexBuffers(0, 1, &go->mesh->g_pVertexBuffer, &stride, &offset);
+			// Установка буфера индексов
+			g_pImmediateContext->IASetIndexBuffer(go->mesh->g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+			if (i == 0)
+			{
+				for (int i = 0; i < 6; i++)
+				{
+					// Устанавливаем матрицу, параметр - положение относительно оси Y в радианах
+					SetMatrixes(i * (DirectX::XM_PI * 2) / 6);
+					// Рисуем i-тую пирамидку
+					g_pImmediateContext->VSSetShader(go->mesh->shader->g_pVertexShader, NULL, 0);
+					g_pImmediateContext->VSSetConstantBuffers(0, 1, &g_pConstantBuffer);
+					g_pImmediateContext->PSSetShader(go->mesh->shader->g_pPixelShader, NULL, 0);
+					g_pImmediateContext->DrawIndexed(go->iSize, 0, 0);
+				}
+				i++;
+				continue;
+			}
+			SetMatrixes();
 			g_pImmediateContext->VSSetShader(go->mesh->shader->g_pVertexShader, NULL, 0);
 			g_pImmediateContext->VSSetConstantBuffers(0, 1, &g_pConstantBuffer);
 			g_pImmediateContext->PSSetShader(go->mesh->shader->g_pPixelShader, NULL, 0);
-			g_pImmediateContext->DrawIndexed(24, 0, 0);
+			g_pImmediateContext->DrawIndexed(go->iSize, 0, 0);
 		}
-		// Выбросить задний буфер на экран
 		g_pSwapChain->Present(0, 0);
 	}
 }

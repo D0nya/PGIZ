@@ -1,6 +1,7 @@
 #pragma once
 #include "framework.h"
 
+
 enum ShaderType
 {
 	VERTEX_SHADER,
@@ -16,35 +17,13 @@ struct SimpleVertex
 {
 	DirectX::XMFLOAT3 Pos;
 	DirectX::XMFLOAT4 Color;
-};
-
-class VertexLayout
+};	
+struct ShapeTemplate
 {
-private:
-	D3D11_INPUT_ELEMENT_DESC* layout = nullptr;
-	WORD* indices = nullptr;
-	SimpleVertex* vertices = nullptr;
-	int indSize = 0;
-	int vertSize = 0;
-public:
-	VertexLayout() {}
-	VertexLayout(D3D11_INPUT_ELEMENT_DESC* lo, WORD* inds, SimpleVertex* verts)
-	{
-		layout = lo;
-		indices = inds;
-		vertices = verts;
-		indSize = sizeof(indices);
-		vertSize = sizeof(vertices);
-	}
-	D3D11_INPUT_ELEMENT_DESC* getLayout() { return layout; }
-	WORD* getIndices(){ return indices; }
-	SimpleVertex* getVertices(){ return vertices; };
-
-	void setIndices(WORD* inds) { indices = inds; indSize = sizeof(indices); }
-	void setVertices(SimpleVertex* verts) { vertices = verts; vertSize = sizeof(vertices); }
-
-	int getVSize() { return vertSize; }
-	int getISize() { return indSize; }
+	WORD* indices;
+	int iSize;
+	SimpleVertex* vertices;
+	int vSize;
 };
 
 class Shader
@@ -54,7 +33,6 @@ public:
 	ID3D11VertexShader* g_pVertexShader = NULL;       // Вершинный шейдер
 	ID3D11PixelShader* g_pPixelShader = NULL;     // Пиксельный шейдер
 	ID3D11InputLayout* g_pVertexLayout = NULL;    // Описание формата вершин
-	VertexLayout* vertexLayout = NULL;
 
 	HRESULT CreateShader(LPCSTR shaderPath, ShaderType shaderType, ID3D11Device* device)
 	{
@@ -127,7 +105,7 @@ public:
 	ID3D11Buffer* g_pVertexBuffer = NULL;         // Буфер вершин
 	HWND hWnd;
 
-	Mesh(ID3D11Device* device, HWND hWnd, LPCSTR shaderPath = "..\\DxLib\\DefaultShader.fx") : hWnd(hWnd)
+	Mesh(ID3D11Device* device, HWND hWnd, const ShapeTemplate* templ, LPCSTR shaderPath = "..\\DxLib\\DefaultShader.fx") : hWnd(hWnd)
 	{
 		HRESULT hr = S_OK;
 		shader = new Shader();
@@ -138,13 +116,26 @@ public:
 		if (FAILED(hr))
 			return;
 
-		hr = CreateVertexBuffer(device);
-		if (FAILED(hr))
-			return;
-		hr = CreateIndexBuffer(device);
-		if (FAILED(hr))
-			return;
+		if (templ != nullptr)
+		{
+			hr = CreateVertexBuffer(device, templ->vSize, (*templ).vertices);
+			if (FAILED(hr))
+				return;
+			hr = CreateIndexBuffer(device, templ->iSize, (*templ).indices);
+			if (FAILED(hr))
+				return;
+		}
+		else
+		{
+			hr = CreateVertexBuffer(device);
+			if (FAILED(hr))
+				return;
+			hr = CreateIndexBuffer(device);
+			if (FAILED(hr))
+				return;
+		}
 	}
+
 	HRESULT CreateIndexBuffer(ID3D11Device* device)
 	{
 		HRESULT hr = S_OK;
@@ -152,22 +143,22 @@ public:
 		ZeroMemory(&bd, sizeof(bd));
 		D3D11_SUBRESOURCE_DATA InitData; // Структура, содержащая данные буфера
 		ZeroMemory(&InitData, sizeof(InitData)); // очищаем 
-			WORD indices[] =
-			{
-				0, 2, 1,  //2,1,0    /* Треугольник 1 = vertices[0], vertices[2], vertices[1] */
-				0, 3, 4,      /* Треугольник 2 = vertices[0], vertices[3], vertices[4] */
-				0, 1, 3,      /* и т. д. */
-				0, 4, 2,
 
-				5, 1, 2,
-				5, 4, 3,
-				5, 3, 1,
-				5, 2, 4
-			};
+		WORD indices[] =
+		{
+			0, 2, 1,  //2,1,0    /* Треугольник 1 = vertices[0], vertices[2], vertices[1] */
+			0, 3, 4,      /* Треугольник 2 = vertices[0], vertices[3], vertices[4] */
+			0, 1, 3,      /* и т. д. */
+			0, 4, 2,
 
+			5, 1, 2,
+			5, 4, 3,
+			5, 3, 1,
+			5, 2, 4
+		};
 
 		bd.Usage = D3D11_USAGE_DEFAULT;            // Структура, описывающая создаваемый буфер
-		bd.ByteWidth = sizeof(indices); // для 6 треугольников необходимо 18 вершин
+		bd.ByteWidth = 24 * sizeof(WORD); // для 6 треугольников необходимо 18 вершин
 		bd.BindFlags = D3D11_BIND_INDEX_BUFFER; // тип - буфер индексов
 		bd.CPUAccessFlags = 0;
 		InitData.pSysMem = indices;         // указатель на наш массив индексов
@@ -179,7 +170,10 @@ public:
 	HRESULT CreateVertexBuffer(ID3D11Device* device)
 	{
 		HRESULT hr = S_OK;
-		SimpleVertex vertices[]
+		D3D11_BUFFER_DESC bd;  // Структура, описывающая создаваемый буфер
+		ZeroMemory(&bd, sizeof(bd));                    // очищаем ее
+
+		SimpleVertex vertices[] =
 		{  /* координаты X, Y, Z                          цвет R, G, B, A     */
 				{ DirectX::XMFLOAT3(0.0f,  3.0f,  0.0f), DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
 				{ DirectX::XMFLOAT3(-1.0f,  0.0f, -1.0f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
@@ -189,10 +183,52 @@ public:
 				{ DirectX::XMFLOAT3(0.0f,  -3.0f,  0.0f), DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
 		};
 
+		bd.Usage = D3D11_USAGE_DEFAULT;
+		bd.ByteWidth = 24 * sizeof(SimpleVertex); // размер буфера = размер одной вершины * 3
+		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;          // тип буфера - буфер 
+		bd.CPUAccessFlags = 0;
+
+		D3D11_SUBRESOURCE_DATA InitData; // Структура, содержащая данные буфера
+		ZeroMemory(&InitData, sizeof(InitData)); // очищаем 
+		InitData.pSysMem = vertices;		// указатель на вершины
+
+		// Вызов метода g_pd3dDevice создаст объект буфера вершин ID3D11Buffer
+		hr = device->CreateBuffer(&bd, &InitData, &g_pVertexBuffer);
+		return hr;
+	}
+
+	HRESULT CreateIndexBuffer(ID3D11Device* device, const int iSize, const WORD* inds)
+	{
+		HRESULT hr = S_OK;
+		D3D11_BUFFER_DESC bd;  // Структура, описывающая создаваемый буфер
+		ZeroMemory(&bd, sizeof(bd));
+		D3D11_SUBRESOURCE_DATA InitData; // Структура, содержащая данные буфера
+		ZeroMemory(&InitData, sizeof(InitData)); // очищаем 
+
+		WORD* indices = new WORD[iSize];
+		memcpy(indices, inds, iSize * sizeof(WORD));
+
+		bd.Usage = D3D11_USAGE_DEFAULT;            // Структура, описывающая создаваемый буфер
+		bd.ByteWidth = iSize * sizeof(WORD); // для 6 треугольников необходимо 18 вершин
+		bd.BindFlags = D3D11_BIND_INDEX_BUFFER; // тип - буфер индексов
+		bd.CPUAccessFlags = 0;
+		InitData.pSysMem = indices;         // указатель на наш массив индексов
+
+		// Вызов метода g_pd3dDevice создаст объект буфера индексов
+		hr = device->CreateBuffer(&bd, &InitData, &g_pIndexBuffer);
+		return hr;
+	}
+	HRESULT CreateVertexBuffer(ID3D11Device* device, const int vSize, const SimpleVertex* verts)
+	{
+		HRESULT hr = S_OK;
 		D3D11_BUFFER_DESC bd;  // Структура, описывающая создаваемый буфер
 		ZeroMemory(&bd, sizeof(bd));                    // очищаем ее
+
+		SimpleVertex* vertices = new SimpleVertex[vSize];
+		memcpy(vertices, verts, vSize * sizeof(SimpleVertex));
+
 		bd.Usage = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(vertices); // размер буфера = размер одной вершины * 3
+		bd.ByteWidth = vSize * sizeof(SimpleVertex); // размер буфера = размер одной вершины * 3
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;          // тип буфера - буфер 
 		bd.CPUAccessFlags = 0;
 
@@ -211,11 +247,21 @@ class GameObject
 public:
 	ID3D11Device* g_pd3dDevice = NULL;          // Устройство (для создания объектов)
 	Mesh* mesh;
+	int iSize, vSize;
 
-	GameObject(ID3D11Device* device, HWND hWnd)
+	GameObject(ID3D11Device* device, HWND hWnd, const ShapeTemplate* templ)
 	{
 		g_pd3dDevice = device;
-		mesh = new Mesh(device, hWnd);
+		if (templ == nullptr)
+		{
+			iSize = 24;
+			vSize = 6;
+		}
+		else {
+			iSize = templ->iSize;
+			vSize = templ->vSize;
+		}
+		mesh = new Mesh(device, hWnd, templ);
 	}
 	~GameObject()
 	{
